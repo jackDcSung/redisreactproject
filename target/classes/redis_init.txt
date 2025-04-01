@@ -1,0 +1,65 @@
+# Redis初始化和測試操作指南
+
+## 連接到Redis
+redis-cli -h 192.168.6.100 -p 6379 -a 111111
+
+## 清除所有數據（謹慎使用）
+FLUSHALL
+
+## 最近瀏覽功能測試命令
+
+### 添加商品到用戶的最近瀏覽列表
+LPUSH user:1:recentlyViewed 5
+LPUSH user:1:recentlyViewed 3
+LPUSH user:1:recentlyViewed 2
+LPUSH user:1:recentlyViewed 4
+LPUSH user:1:recentlyViewed 1
+
+### 查看用戶的最近瀏覽列表
+LRANGE user:1:recentlyViewed 0 -1
+
+### 修剪列表保持固定大小
+LTRIM user:1:recentlyViewed 0 9
+
+### 移除最近瀏覽列表中的商品
+LREM user:1:recentlyViewed 0 3
+
+### 設置最近瀏覽列表的過期時間（7天）
+EXPIRE user:1:recentlyViewed 604800
+
+## 熱門商品功能測試命令
+
+### 增加商品的熱度分數
+ZINCRBY trending:products 1 1
+ZINCRBY trending:products 1 2
+ZINCRBY trending:products 1 3
+ZINCRBY trending:products 2 1
+ZINCRBY trending:products 3 1
+ZINCRBY trending:products 1 4
+ZINCRBY trending:products 2 5
+
+### 查看熱門商品列表（按熱度排序）
+ZREVRANGE trending:products 0 9 WITHSCORES
+
+### 查看某個商品的熱度分數
+ZSCORE trending:products 1
+
+### 移除熱度低的商品
+ZREMRANGEBYRANK trending:products 0 -11
+
+### 設置熱門商品列表的過期時間（1天）
+EXPIRE trending:products 86400
+
+## 監控Redis服務
+
+### 查看Redis信息
+INFO
+
+### 查看內存使用情況
+INFO memory
+
+### 查看客戶端連接
+CLIENT LIST
+
+### 查看每個數據庫中key的數量
+INFO keyspace 
