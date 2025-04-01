@@ -26,10 +26,12 @@ import java.util.stream.Collectors;
 /**
  * 認證相關控制器
  * 處理用戶登入註冊等功能
+ * 
+ * 路徑：/auth/* （無需/api前綴）
  */
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 @Slf4j
 public class AuthController {
@@ -38,6 +40,10 @@ public class AuthController {
     private final PasswordEncoder encoder;
     private final JwtUtils jwtUtils;
 
+    /**
+     * 用戶登入
+     * 路徑：POST /auth/login
+     */
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         log.info("登入請求: {}", loginRequest.getUsername());
@@ -61,6 +67,10 @@ public class AuthController {
                 roles.get(0).replace("ROLE_", "")));
     }
 
+    /**
+     * 用戶註冊
+     * 路徑：POST /auth/register
+     */
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest signUpRequest) {
         log.info("註冊請求: {}", signUpRequest.getUsername());
@@ -93,12 +103,20 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("用戶註冊成功!"));
     }
     
+    /**
+     * 檢查用戶名可用性
+     * 路徑：GET /auth/check-username?username=xxx
+     */
     @GetMapping("/check-username")
     public ResponseEntity<?> checkUsernameAvailability(@RequestParam String username) {
         boolean exists = userRepository.existsByUsername(username);
         return ResponseEntity.ok(new MessageResponse(exists ? "用戶名已被使用" : "用戶名可用"));
     }
     
+    /**
+     * 檢查郵箱可用性
+     * 路徑：GET /auth/check-email?email=xxx
+     */
     @GetMapping("/check-email")
     public ResponseEntity<?> checkEmailAvailability(@RequestParam String email) {
         boolean exists = userRepository.existsByEmail(email);

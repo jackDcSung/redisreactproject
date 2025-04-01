@@ -3,12 +3,14 @@ package com.shop.backend.config;
 import com.shop.backend.security.AuthEntryPointJwt;
 import com.shop.backend.security.AuthTokenFilter;
 import com.shop.backend.security.UserDetailsServiceImpl;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -28,6 +30,8 @@ import java.util.List;
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
+@Slf4j
 public class SecurityConfig {
     
     @Autowired
@@ -63,10 +67,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("Authorization"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
         configuration.setMaxAge(3600L);
+        configuration.setAllowCredentials(true);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -75,21 +80,41 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                // 允許不需要認證的公開API路徑
-                .requestMatchers("/api/auth/**").permitAll()  // 所有認證相關接口
-                .requestMatchers("/api/public/**").permitAll() // 所有公開接口
-                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger文檔
-                .anyRequest().authenticated() // 其他所有請求需要認證
-            );
+        log.info("配置安全過濾鏈");
         
+        http
+            .csrf(csrf -> {
+                csrf.disable();
+                log.info("CSRF保護已禁用");
+            })
+            .cors(cors -> {
+                cors.configurationSource(corsConfigurationSource());
+                log.info("CORS配置已應用");
+            })
+            .exceptionHandling(exception -> {
+                exception.authenticationEntryPoint(unauthorizedHandler);
+                log.info("未授權處理器已配置");
+            })
+            .sessionManagement(session -> {
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+                log.info("會話管理策略設置為STATELESS");
+            })
+            .authorizeHttpRequests(auth -> {
+                auth
+                    .requestMatchers("/auth/**").permitAll()
+                    .requestMatchers("/public/**").permitAll()
+                    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                    .anyRequest().authenticated();
+                log.info("請求授權規則已配置");
+            });
+        
+        // 配置認證提供者
         http.authenticationProvider(authenticationProvider());
+        log.info("認證提供者已配置");
+        
+        // 添加JWT過濾器
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+        log.info("JWT過濾器已添加到過濾器鏈中");
 
         return http.build();
     }

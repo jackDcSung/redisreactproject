@@ -18,8 +18,7 @@ import java.util.List;
 @Configuration
 public class OpenApiConfig {
 
-    @Value("${server.servlet.context-path}")
-    private String contextPath;
+    private String contextPath = "";
 
     @Bean
     public OpenAPI openAPI() {
